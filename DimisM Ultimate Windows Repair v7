@@ -1,0 +1,171 @@
+@echo off
+chcp 65001 >nul
+title DimisM Ultimate Windows Repair v7
+color 0B
+
+:: Έλεγχος για δικαιώματα διαχειριστή
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo.
+    echo  [!] ΣΦΑΛΜΑ: Πρεπει να εκτελεσετε το αρχειο ως ΔΙΑΧΕΙΡΙΣΤΗΣ!
+    echo.
+    pause
+    exit
+)
+
+:menu
+cls
+echo.
+echo  ==============================================================
+echo     _____  _           _       __  __ 
+echo    ^|  __ \^(_)         (_)     ^|  \/  ^|
+echo    ^| ^|  ^| ^|_ _ __ ___  _ ___  ^| \  / ^|
+echo    ^| ^|  ^| ^| ^| '_ ` _ \^| / __^| ^| ^|\/^| ^|
+echo    ^| ^|__^| ^| ^| ^| ^| ^| ^| ^| \__ \ ^| ^|  ^| ^|
+echo    ^|_____/^|_^|_^| ^|_^| ^|_^|_^|___/ ^|_^|  ^|_^| WINDOWS REPAIR v7
+echo.                                              
+echo  ==============================================================
+echo   [0]  CREATE RESTORE POINT (ΑΣΦΑΛΕΙΑ - Καντε το πρωτα!)
+echo  --------------------------------------------------------------
+echo   [1]  SFC Scannow          [8]  Network Reset ^& DNS
+echo   [2]  CHKDSK C: /F         [9]  Time Sync (Fix Clock)
+echo   [3]  DISM Restore Health  [10] TCP Autotuning Disable
+echo   [4]  MRT (Malware Tool)   [11] Windows Store Reset
+echo   [5]  Turbo Temp Clean     [12] Winget Upgrade Apps
+echo   [6]  Disk Cleanup (GUI)   [13] Windows Update Clean
+echo   [7]  RAM Diagnostics      [14] System Health Report
+echo  --------------------------------------------------------------
+echo   [I]  Get System Info      [R] Restart   [S] Shutdown
+echo   [X]  Exit
+echo  ==============================================================
+echo.
+set /p choice=" > Επιλέξτε ενέργεια: "
+
+if "%choice%"=="0" goto restorepoint
+if "%choice%"=="1" goto sfc
+if "%choice%"=="2" goto chkdsk
+if "%choice%"=="3" goto dism
+if "%choice%"=="4" goto mrt
+if "%choice%"=="5" goto quickclean
+if "%choice%"=="6" goto cleanup
+if "%choice%"=="7" goto ramtest
+if "%choice%"=="8" goto netreset
+if "%choice%"=="9" goto timesync
+if "%choice%"=="10" goto tcp
+if "%choice%"=="11" goto storereset
+if "%choice%"=="12" goto winget
+if "%choice%"=="13" goto compclean
+if "%choice%"=="14" goto health
+if /i "%choice%"=="i" goto sysinfo
+if /i "%choice%"=="r" goto restart
+if /i "%choice%"=="s" goto shutdown
+if /i "%choice%"=="x" exit
+goto menu
+
+:restorepoint
+echo. & echo [*] Δημιουργία Σημείου Επαναφοράς (Restore Point)...
+echo     Παρακαλώ περιμένετε, αυτό μπορεί να πάρει λίγο χρόνο.
+powershell -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'DimisM Repair Point' -RestorePointType 'MODIFY_SETTINGS'"
+if %errorlevel%==0 (
+    echo [OK] Το σημείο επαναφοράς δημιουργήθηκε επιτυχώς!
+) else (
+    echo [!] Σφάλμα: Βεβαιωθείτε ότι η Επαναφορά Συστήματος είναι ενεργοποιημένη.
+)
+pause & goto menu
+
+:sfc
+echo. & echo [*] Εκτέλεση SFC (System File Checker)...
+sfc /scannow
+pause & goto menu
+
+:chkdsk
+echo. & echo [*] Προγραμματισμός CHKDSK για την επανεκκίνηση...
+chkdsk c: /f
+pause & goto menu
+
+:dism
+echo. & echo [*] Εκτέλεση DISM RestoreHealth...
+dism /online /cleanup-image /restorehealth
+pause & goto menu
+
+:mrt
+start mrt.exe & goto menu
+
+:quickclean
+echo. & echo [*] Καθαρισμός Temp Files...
+del /s /f /q %windir%\temp\*.* 2>nul & rd /s /q %windir%\temp 2>nul & md %windir%\temp
+del /s /f /q %temp%\*.* 2>nul & rd /s /q %temp% 2>nul & md %temp%
+del /s /f /q %windir%\prefetch\*.* 2>nul
+echo [OK] Ολοκληρώθηκε. & pause & goto menu
+
+:cleanup
+cleanmgr /d c: & goto menu
+
+:ramtest
+echo. & echo [*] Εκκίνηση Διαγνωστικού Μνήμης των Windows...
+echo     Θα ζητηθεί επανεκκίνηση για τον έλεγχο.
+mdsched.exe
+goto menu
+
+:netreset
+echo. & echo [*] Network Reset...
+ipconfig /flushdns
+netsh winsock reset
+netsh int ip reset
+echo. & echo [OK] Το δίκτυο επαναφέρθηκε.
+pause & goto menu
+
+:timesync
+echo. & echo [*] Συγχρονισμός ώρας συστήματος...
+net stop w32time
+net start w32time
+w32tm /resync
+echo. & echo [OK] Η ώρα συγχρονίστηκε.
+pause & goto menu
+
+:tcp
+echo. & echo [*] Απενεργοποίηση TCP Autotuning...
+netsh int tcp set global autotuninglevel=disable
+echo. & echo [OK] Εφαρμόστηκε.
+pause & goto menu
+
+:storereset
+echo. & echo [*] Reset Windows Store Cache...
+wsreset.exe
+echo. & echo [OK] Ολοκληρώθηκε (μπορεί να ανοίξει το Store).
+pause & goto menu
+
+:winget
+echo. & echo [*] Αναζήτηση και εγκατάσταση ενημερώσεων εφαρμογών...
+winget upgrade --all
+pause & goto menu
+
+:compclean
+echo. & echo [*] Καθαρισμός Windows Update Store...
+dism /online /cleanup-image /startcomponentcleanup /resetbase
+pause & goto menu
+
+:health
+echo. & echo [*] WinSat (Speed Test):
+powershell -Command "Get-CimInstance Win32_WinSat"
+echo. & echo ---------------------------------------------
+echo. & echo [*] S.M.A.R.T. Status Δίσκων:
+wmic diskdrive get model,status
+echo. & echo ---------------------------------------------
+echo. & echo [*] Δημιουργία Battery Report...
+powercfg /batteryreport /output "%USERPROFILE%\Desktop\Battery_Report.html"
+echo [OK] Το report αποθηκεύτηκε στην Επιφάνεια Εργασίας.
+pause & goto menu
+
+:sysinfo
+echo. & echo [*] Πληροφορίες Συστήματος:
+systeminfo | findstr /B /C:"OS Name" /C:"OS Version" /C:"System Type" /C:"Total Physical Memory" /C:"Original Install Date"
+echo. & echo [*] Κατάσταση Άδειας Windows:
+slmgr /xpr
+pause & goto menu
+
+:restart
+shutdown /r /t 10 & exit
+
+:shutdown
+shutdown /s /t 10 & exit
